@@ -13,7 +13,11 @@ function Write-LogMessage {
     
     # If logging is active, write to transcript
     if ($global:transcriptActive) {
-        Add-Content -Path $global:logFilePath -Value $formattedMessage
+        try {
+            Add-Content -Path $global:logFilePath -Value $formattedMessage
+        } catch {
+            Write-Host "Warning: Could not write to log file: $_"
+        }
     }
 }
 
@@ -22,17 +26,6 @@ function Start-Logging {
     param(
         [string]$Path
     )
-    # Ensure the directory exists
-    $logDir = Split-Path -Path $Path -Parent
-    if (-not (Test-Path -Path $logDir)) {
-        New-Item -ItemType Directory -Path $logDir -Force | Out-Null
-    }
-    
-    # Ensure the log file exists
-    if (-not (Test-Path -Path $Path)) {
-        New-Item -ItemType File -Path $Path -Force | Out-Null
-    }
-    
     try {
         $global:logFilePath = $Path
         $global:transcriptActive = $true

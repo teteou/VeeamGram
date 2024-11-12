@@ -19,54 +19,68 @@ if ($config.debug_log) {
 
 # Add Veeam commands if not already added
 if (-not (Get-PSSnapin -Name VeeamPSSnapin -ErrorAction SilentlyContinue)) {
-    Add-PSSnapin VeeamPSSnapin
+    try {
+        Add-PSSnapin VeeamPSSnapin
+    } catch {
+        Write-LogMessage 'Error' "Failed to add VeeamPSSnapin: $_"
+    }
 }
 
 # Get the Veeam session for the specified job
 $session = Get-VBRBackupSession | Where-Object { ($_.OrigJobName -eq $JobName) -and ($Id -eq $_.Id.ToString()) }
 
-# Wait for the session to complete
-while ($session.IsCompleted -eq $false) {
-    Write-LogMessage 'Info' 'Session not finished, sleeping for 200ms...'
-    Start-Sleep -Milliseconds 200
-    $session = Get-VBRBackupSession | Where-Object { ($_.OrigJobName -eq $JobName) -and ($Id -eq $_.Id.ToString()) }
-}
+if (-not $session) {
+    Write-LogMessage 'Error' "No valid session found for Job: $JobName with ID: $Id"
+    $Status = "Desconocido"
+    $JobName = $JobName -or "N/A"
+    $vms = "Ninguno"
+    $JobSizeRound = "0 B"
+    $TransfSizeRound = "0 B"
+    $DurationFormatted = "N/A"
+} else {
+    # Gather session information if available
+    $Status = $session.Result
+    $JobName = $session.Name.ToString().Trim()
+    $JobType = $session.JobTypeString.Trim()
+    $JobSize = [Float]$session.BackupStats.DataSize
+    $TransfSize = [Float]$session.BackupStats.BackupSize
+    $job = Get-VBRJob -Name $session.JobName
 
-# Gather session information
-$Status = $session.Result
-$JobName = $session.Name.ToString().Trim()
-$JobType = $session.JobTypeString.Trim()
-$JobSize = [Float]$session.BackupStats.DataSize
-$TransfSize = [Float]$session.BackupStats.BackupSize
-$job = Get-VBRJob -Name $session.JobName
-$vms = ($job.GetObjectsInJob()).Name -join ", "
-$service = $config.service_name
+    if ($job) {
+        $vms = ($job.GetObjectsInJob()).Name -join ", "
+    } else {
+        $vms = "Ninguno"
+    }
 
-# Format sizes to human-readable strings
-function Format-Size($size) {
-    switch ($size) {
-        {$_ -lt 1KB} {"{0} B" -f $size}
-        {$_ -lt 1MB} {"{0:N2} KB" -f ($size / 1KB)}
-        {$_ -lt 1GB} {"{0:N2} MB" -f ($size / 1MB)}
-        {$_ -lt 1TB} {"{0:N2} GB" -f ($size / 1GB)}
-        default {"{0:N2} TB" -f ($size / 1TB)}
+    # Format sizes
+    function Format-Size($size) {
+        switch ($size) {
+            {$_ -lt 1KB} {"{0} B" -f $size}
+            {$_ -lt 1MB} {"{0:N2} KB" -f ($size / 1KB)}
+            {$_ -lt 1GB} {"{0:N2} MB" -f ($size / 1MB)}
+            {$_ -lt 1TB} {"{0:N2} GB" -f ($size / 1GB)}
+            default {"{0:N2} TB" -f ($size / 1TB)}
+        }
+    }
+    $JobSizeRound = Format-Size $JobSize
+    $TransfSizeRound = Format-Size $TransfSize
+
+    # Calculate job duration
+    if ($session.Info.EndTime -and $session.Info.CreationTime) {
+        $Duration = $session.Info.EndTime - $session.Info.CreationTime
+        $DurationFormatted = '{0:00}h {1:00}m {2:00}s' -f $Duration.Hours, $Duration.Minutes, $Duration.Seconds
+    } else {
+        $DurationFormatted = "N/A"
     }
 }
 
-$JobSizeRound = Format-Size $JobSize
-$TransfSizeRound = Format-Size $TransfSize
-
-# Calculate job duration
-$Duration = $session.Info.EndTime - $session.Info.CreationTime
-$DurationFormatted = '{0:00}h {1:00}m {2:00}s' -f $Duration.Hours, $Duration.Minutes, $Duration.Seconds
-
-# Determine the status message and image
-switch ($Status) {
-    "None" { $messageStatus = "En progreso"; $img = $config.default_img }
-    "Warning" { $messageStatus = "Advertencia"; $img = $config.warn_img }
-    "Success" { $messageStatus = "Éxito"; $img = $config.success_img }
-    "Failed" { $messageStatus = "Error"; $img = $config.fail_img }
-    default { $messageStatus = "Desconocido"; $img = $config.default_img }
+# Determine the status message
+$messageStatus = switch ($Status) {
+    "None" { "En progreso" }
+    "Warning" { "Advertencia" }
+    "Success" { "Éxito" }
+    "Failed" { "Error" }
+    default { "Estado desconocido: $Status" }
 }
 
 # Build the notification message
