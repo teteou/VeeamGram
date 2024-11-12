@@ -1,0 +1,18 @@
+{
+    "ChatID": "YOUR_CHAT_ID",
+    "MyToken": "YOUR_BOT_TOKEN",
+    "service_name": "VeeamGram",
+    "enable_notifications": true,
+    "notification_levels": {
+        "success": true,
+        "warning": true,
+        "error": true
+    },
+    "message_template": {
+        "success": "Backup completado con éxito: {job_name}",
+        "warning": "Advertencia en el backup: {job_name}",
+        "error": "Error en el backup: {job_name}"
+    },
+    "debug_log": true
+}
+
