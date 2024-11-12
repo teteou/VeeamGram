@@ -12,20 +12,20 @@ Import-Module "$PSScriptRoot\Helpers"
 # Load configuration from conf.json
 $config = (Get-Content "$PSScriptRoot\config\conf.json") -Join "`n" | ConvertFrom-Json
 
-# Validate configuration
-if (-not $config.ChatID -or -not $config.MyToken) {
-    Write-LogMessage -Tag 'Error' -Message "Configuración inválida en conf.json. Verifica ChatID y MyToken."
-    exit
-}
-
 # Initialize logging if enabled in config
 if ($config.debug_log) {
     Start-Logging "$PSScriptRoot\log\debug.log"
     Write-LogMessage -Tag 'Info' -Message "Starting NotificationHandler"
 }
 
-# Import Veeam module
-Import-Module "C:\Program Files\Veeam\Backup and Replication\Console\Veeam.Backup.PowerShell\Veeam.Backup.PowerShell.psd1"
+# Import Veeam module if not already imported
+try {
+    Import-Module "C:\Program Files\Veeam\Backup and Replication\Console\Veeam.Backup.PowerShell\Veeam.Backup.PowerShell.psd1" -ErrorAction Stop
+    Write-LogMessage -Tag 'Info' -Message "Veeam PowerShell module imported successfully."
+} catch {
+    Write-LogMessage -Tag 'Error' -Message "Failed to import Veeam PowerShell module: $_"
+    exit
+}
 
 # Run PreScript if specified
 if ($PreScript) {

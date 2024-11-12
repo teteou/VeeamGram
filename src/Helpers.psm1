@@ -7,16 +7,16 @@ function Write-LogMessage {
     # Construct the log message format
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $formattedMessage = "[$timestamp] [$Tag] $Message"
-    
+
     # Write to console
     Write-Host $formattedMessage
-    
-    # If logging is active, write to transcript
+
+    # If logging is active, try to write to log file
     if ($global:transcriptActive) {
         try {
-            Add-Content -Path $global:logFilePath -Value $formattedMessage
+            Add-Content -Path $global:logFilePath -Value $formattedMessage -ErrorAction Stop
         } catch {
-            Write-Host "Warning: Could not write to log file: $_"
+            Write-Host "[Warning] Unable to write to log file: $($_.Exception.Message)"
         }
     }
 }

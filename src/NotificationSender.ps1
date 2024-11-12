@@ -14,23 +14,23 @@ $config = (Get-Content "$PSScriptRoot\config\conf.json") -Join "`n" | ConvertFro
 # Initialize logging if enabled in config
 if ($config.debug_log) {
     Start-Logging "$PSScriptRoot\log\debug.log"
-    Write-LogMessage 'Info' "Starting NotificationSender for Job: $JobName with ID: $Id"
+    Write-LogMessage -Tag 'Info' -Message "Starting NotificationSender for Job: $JobName with ID: $Id"
 }
 
-# Add Veeam commands if not already added
-if (-not (Get-PSSnapin -Name VeeamPSSnapin -ErrorAction SilentlyContinue)) {
-    try {
-        Add-PSSnapin VeeamPSSnapin
-    } catch {
-        Write-LogMessage 'Error' "Failed to add VeeamPSSnapin: $_"
-    }
+# Import Veeam module if not already imported
+try {
+    Import-Module "C:\Program Files\Veeam\Backup and Replication\Console\Veeam.Backup.PowerShell\Veeam.Backup.PowerShell.psd1" -ErrorAction Stop
+    Write-LogMessage -Tag 'Info' -Message "Veeam PowerShell module imported successfully."
+} catch {
+    Write-LogMessage -Tag 'Error' -Message "Failed to import Veeam PowerShell module: $_"
+    exit
 }
 
 # Get the Veeam session for the specified job
 $session = Get-VBRBackupSession | Where-Object { ($_.OrigJobName -eq $JobName) -and ($Id -eq $_.Id.ToString()) }
 
 if (-not $session) {
-    Write-LogMessage 'Error' "No valid session found for Job: $JobName with ID: $Id"
+    Write-LogMessage -Tag 'Error' -Message "No valid session found for Job: $JobName with ID: $Id"
     $Status = "Desconocido"
     $JobName = $JobName -or "N/A"
     $vms = "Ninguno"
@@ -101,14 +101,14 @@ $URI = "https://api.telegram.org/bot$($MyToken)/sendMessage?chat_id=$($ChatID)&t
 try {
     $response = Invoke-RestMethod -Uri $URI
     if ($config.debug_log) {
-        Write-LogMessage 'Info' "Notification sent to Telegram: $messageContent"
+        Write-LogMessage -Tag 'Info' -Message "Notification sent to Telegram: $messageContent"
     }
 } catch {
-    Write-LogMessage 'Error' "Failed to send notification to Telegram: $_"
+    Write-LogMessage -Tag 'Error' -Message "Failed to send notification to Telegram: $_"
 }
 
 # End of script logging
 if ($config.debug_log) {
-    Write-LogMessage 'Info' "NotificationSender execution completed for Job: $JobName"
+    Write-LogMessage -Tag 'Info' -Message "NotificationSender execution completed for Job: $JobName"
     Stop-Logging
 }
