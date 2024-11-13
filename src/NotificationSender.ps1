@@ -26,6 +26,9 @@ try {
     exit
 }
 
+# Enabling TLS 1.2 for secure connections
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
 # Get the Veeam session for the specified job
 $session = Get-VBRBackupSession | Where-Object { ($_.OrigJobName -eq $JobName) -and ($Id -eq $_.Id.ToString()) }
 
@@ -62,10 +65,11 @@ if (-not $session) {
             default {"{0:N2} TB" -f ($size / 1TB)}
         }
     }
+
     $JobSizeRound = Format-Size $JobSize
     $TransfSizeRound = Format-Size $TransfSize
 
-    # Calculate job duration
+    # Calculate duration
     if ($session.Info.EndTime -and $session.Info.CreationTime) {
         $Duration = $session.Info.EndTime - $session.Info.CreationTime
         $DurationFormatted = '{0:00}h {1:00}m {2:00}s' -f $Duration.Hours, $Duration.Minutes, $Duration.Seconds

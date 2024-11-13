@@ -13,10 +13,14 @@ function Write-LogMessage {
 
     # If logging is active, try to write to log file
     if ($global:transcriptActive) {
-        try {
-            Add-Content -Path $global:logFilePath -Value $formattedMessage -ErrorAction Stop
-        } catch {
-            Write-Host "[Warning] Unable to write to log file: $($_.Exception.Message)"
+        for ($i = 0; $i -lt 5; $i++) {
+            try {
+                Add-Content -Path $global:logFilePath -Value $formattedMessage -ErrorAction Stop
+                break
+            } catch {
+                # Si el archivo está siendo usado, espera un poco antes de intentar de nuevo
+                Start-Sleep -Milliseconds 200
+            }
         }
     }
 }
