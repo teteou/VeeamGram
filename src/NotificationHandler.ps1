@@ -1,86 +1,36 @@
-[CmdletBinding()]
-param(
-    [Parameter(Mandatory=$false)][string]$PreScript,
-    [Parameter(Mandatory=$false)][string]$PostScript
+param (
+    [string]$JobName,
+    [string]$JobResult
 )
 
-####################
-# Import Functions #
-####################
-Import-Module "$PSScriptRoot\Helpers"
+# Importar el módulo de Veeam
+Import-Module VeeamPSSnapIn
 
-# Load configuration from conf.json
-$config = (Get-Content "$PSScriptRoot\config\conf.json") -Join "`n" | ConvertFrom-Json
+# Obtener el trabajo de backup por nombre
+$Job = Get-VBRJob -Name $JobName
 
-# Initialize logging if enabled in config
-if ($config.debug_log) {
-    Start-Logging "$PSScriptRoot\log\debug.log"
-    Write-LogMessage -Tag 'Info' -Message "Starting NotificationHandler"
-}
+if ($Job) {
+    # Obtener la última sesión del trabajo
+    $LastSession = $Job.FindLastSession()
 
-# Import Veeam module if not already imported
-try {
-    Import-Module "C:\Program Files\Veeam\Backup and Replication\Console\Veeam.Backup.PowerShell\Veeam.Backup.PowerShell.psd1" -ErrorAction Stop
-    Write-LogMessage -Tag 'Info' -Message "Veeam PowerShell module imported successfully."
-} catch {
-    Write-LogMessage -Tag 'Error' -Message "Failed to import Veeam PowerShell module: $_"
-    exit
-}
+    if ($LastSession) {
+        # Obtener detalles adicionales de la sesión
+        $BackupSize = $LastSession.Info.Progress.BackupSize
+        $Duration = $LastSession.Info.Progress.Duration
+        $VMsProcessed = $LastSession.Info.Progress.ObjectsNumber
 
-# Run PreScript if specified
-if ($PreScript) {
-    Write-LogMessage -Tag 'Info' -Message "Executing PreScript..."
-    try {
-        Start-Process -FilePath "powershell" -ArgumentList "-File $PreScript" -NoNewWindow -Wait
-        Write-LogMessage -Tag 'Info' -Message "PreScript executed successfully."
-    } catch {
-        Write-LogMessage -Tag 'Error' -Message "Failed to execute PreScript: $_"
-    }
-}
+        # Construir el mensaje para Telegram
+        $Message = "Resultado del trabajo de backup: $JobName`n"
+        $Message += "Estado: $JobResult`n"
+        $Message += "Tamaño del backup: $BackupSize bytes`n"
+        $Message += "Duración: $Duration segundos`n"
+        $Message += "Máquinas virtuales procesadas: $VMsProcessed"
 
-# Get Veeam job and session information
-try {
-    $parentpid = (Get-WmiObject Win32_Process -Filter "processid='$pid'").parentprocessid.ToString()
-    $parentcmd = (Get-WmiObject Win32_Process -Filter "processid='$parentpid'").CommandLine
-    $job = Get-VBRJob | Where-Object { $parentcmd -like "*$($_.Id)*" }
-    $session = Get-VBRBackupSession | Where-Object { ($_.OrigJobName -eq $job.Name) -and ($parentcmd -like "*$($_.Id)*") }
-} catch {
-    Write-LogMessage -Tag 'Error' -Message "Failed to retrieve Veeam job/session information: $_"
-    exit
-}
-
-# Check if a valid session was found
-if ($session) {
-    $JobName = $session.OrigJobName.Trim()
-    $Id = $session.Id.ToString().Trim()
-
-    # Build arguments for the NotificationSender script
-    $powershellArguments = "-File $PSScriptRoot\NotificationSender.ps1 -JobName '$JobName' -Id '$Id'"
-
-    # Start a new process to handle the notification
-    try {
-        Start-Process -FilePath "powershell" -ArgumentList $powershellArguments -NoNewWindow -Wait
-        Write-LogMessage -Tag 'Info' -Message "Notification process started for Job: $JobName"
-    } catch {
-        Write-LogMessage -Tag 'Error' -Message "Failed to start notification process: $_"
+        # Enviar el mensaje a Telegram
+        # Aquí iría el código para enviar el mensaje a Telegram utilizando tu bot
+    } else {
+        Write-Host "No se encontró ninguna sesión para el trabajo '$JobName'."
     }
 } else {
-    Write-LogMessage -Tag 'Warning' -Message "VBR Job Session not found. Exiting script (script should be executed as part of a VBR Job)."
-}
-
-# Run PostScript if specified
-if ($PostScript) {
-    Write-LogMessage -Tag 'Info' -Message "Executing PostScript..."
-    try {
-        Start-Process -FilePath "powershell" -ArgumentList "-File $PostScript" -NoNewWindow -Wait
-        Write-LogMessage -Tag 'Info' -Message "PostScript executed successfully."
-    } catch {
-        Write-LogMessage -Tag 'Error' -Message "Failed to execute PostScript: $_"
-    }
-}
-
-# End of script logging
-if ($config.debug_log) {
-    Write-LogMessage -Tag 'Info' -Message "NotificationHandler execution completed."
-    Stop-Logging
+    Write-Host "No se encontró el trabajo con el nombre '$JobName'."
 }
