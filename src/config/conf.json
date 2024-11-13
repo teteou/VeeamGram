@@ -13,6 +13,6 @@
         "warning": "Advertencia en el backup: {job_name}",
         "error": "Error en el backup: {job_name}"
     },
-    "debug_log": true
+    "debug_log": false
 }
 

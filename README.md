@@ -45,6 +45,25 @@
 
 ## Configuración
 
+### 0. Configuración del Bot de Telegram
+
+#### 1. Creación del Bot
+
+1. En Telegram, inicia una conversación con [BotFather](https://t.me/botfather).
+2. Crea un nuevo bot usando el comando `/newbot` y sigue las instrucciones para asignarle un nombre y un identificador.
+3. BotFather te proporcionará un token de acceso que necesitarás para configurar tu bot en `conf.json`.
+
+#### 2. Obtener el `ChatID`
+
+1. Envía un mensaje al bot desde tu cuenta de Telegram.
+2. Para obtener tu `ChatID`, puedes utilizar el siguiente comando `curl` desde tu terminal:
+   ```bash
+   curl "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates"
+   ```
+   **Nota**: Reemplaza `<YOUR_BOT_TOKEN>` con el token proporcionado por BotFather.
+
+3. Busca en la respuesta el `chat.id`, que será tu `ChatID`.
+
 ### 1. Crear y Configurar el Archivo `conf.json`
 
 Crea un archivo `conf.json` en la carpeta `config` con el siguiente contenido:
