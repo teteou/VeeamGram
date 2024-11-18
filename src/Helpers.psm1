@@ -11,7 +11,7 @@ function Write-LogMessage {
     # Write to console
     Write-Host $formattedMessage
 
-    # If logging is active, try to write to log file
+    # If logging is active, try to write to log file with retries
     if ($global:transcriptActive) {
         for ($i = 0; $i -lt 5; $i++) {
             try {

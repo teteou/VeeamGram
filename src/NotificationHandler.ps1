@@ -27,10 +27,20 @@ if ($Job) {
         $Message += "Máquinas virtuales procesadas: $VMsProcessed"
 
         # Enviar el mensaje a Telegram
-        # Aquí iría el código para enviar el mensaje a Telegram utilizando tu bot
+        $config = (Get-Content "$PSScriptRoot\config\conf.json") -Join "`n" | ConvertFrom-Json
+        $MyToken = $config.MyToken
+        $ChatID = $config.ChatID
+        $URI = "https://api.telegram.org/bot$($MyToken)/sendMessage?chat_id=$($ChatID)&text=$([System.Uri]::EscapeDataString($Message))"
+
+        try {
+            $response = Invoke-RestMethod -Uri $URI
+            Write-LogMessage -Tag 'Info' -Message "Mensaje enviado a Telegram: $Message"
+        } catch {
+            Write-LogMessage -Tag 'Error' -Message "Error al enviar el mensaje a Telegram: $_"
+        }
     } else {
-        Write-Host "No se encontró ninguna sesión para el trabajo '$JobName'."
+        Write-LogMessage -Tag 'Error' -Message "No se encontró ninguna sesión para el trabajo '$JobName'."
     }
 } else {
-    Write-Host "No se encontró el trabajo con el nombre '$JobName'."
+    Write-LogMessage -Tag 'Error' -Message "No se encontró el trabajo con el nombre '$JobName'."
 }
