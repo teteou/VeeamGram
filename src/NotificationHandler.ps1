@@ -4,16 +4,24 @@ param (
 )
 
 # Importar el módulo de Veeam
-Import-Module VeeamPSSnapIn
+try {
+    Import-Module VeeamPSSnapIn -ErrorAction Stop
+    Write-LogMessage -Tag 'Info' -Message "VeeamPSSnapIn module imported successfully."
+} catch {
+    Write-LogMessage -Tag 'Error' -Message "Failed to import VeeamPSSnapIn module: $_"
+    exit
+}
 
 # Obtener el trabajo de backup por nombre
 $Job = Get-VBRJob -Name $JobName
 
 if ($Job) {
+    Write-LogMessage -Tag 'Info' -Message "Job found: $JobName"
     # Obtener la última sesión del trabajo
     $LastSession = $Job.FindLastSession()
 
     if ($LastSession) {
+        Write-LogMessage -Tag 'Info' -Message "Last session found for Job: $JobName"
         # Obtener detalles adicionales de la sesión
         $BackupSize = $LastSession.Info.Progress.BackupSize
         $Duration = $LastSession.Info.Progress.Duration
