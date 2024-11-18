@@ -42,6 +42,7 @@ if (-not $session) {
     $DurationFormatted = "N/A"
 } else {
     # Gather session information if available
+    Write-LogMessage -Tag 'Info' -Message "Session found for Job: $JobName with ID: $Id"
     $Status = $session.Result
     $JobName = $session.Name.ToString().Trim()
     $JobType = $session.JobTypeString.Trim()
@@ -52,6 +53,20 @@ if (-not $session) {
     if ($job) {
         $vms = ($job.GetObjectsInJob()).Name -join ", "
     } else {
+        $vms = "Ninguno"
+    }
+
+    # Validate and log gathered information
+    if (-not $JobName) {
+        Write-LogMessage -Tag 'Warning' -Message "JobName is empty or invalid. Setting default value."
+        $JobName = "N/A"
+    }
+    if (-not $Status) {
+        Write-LogMessage -Tag 'Warning' -Message "Status is empty or invalid. Setting default value."
+        $Status = "Desconocido"
+    }
+    if (-not $vms) {
+        Write-LogMessage -Tag 'Warning' -Message "No VMs found for Job. Setting default value."
         $vms = "Ninguno"
     }
 
