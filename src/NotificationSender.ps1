@@ -29,6 +29,10 @@ try {
 # Enabling TLS 1.2 for secure connections
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
+# List all available jobs for debugging purposes
+$jobs = Get-VBRJob
+Write-LogMessage -Tag 'Debug' -Message "Available Jobs: $($jobs | ForEach-Object { $_.Name })"
+
 # Get the Veeam session for the specified job
 $session = Get-VBRBackupSession | Where-Object { ($_.OrigJobName -eq $JobName) -and ($Id -eq $_.Id.ToString()) }
 
